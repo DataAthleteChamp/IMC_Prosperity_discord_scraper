@@ -1,0 +1,51 @@
+name: Bug report
+description: Something isn't working as expected.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for filing a bug. Please do **not** paste real Discord tokens,
+        user IDs, or message content in this issue — redact anything that
+        looks sensitive.
+  - type: input
+    id: version
+    attributes:
+      label: Scraper version
+      placeholder: "0.1.0 (output of `prosperity-scraper --version`)"
+    validations:
+      required: true
+  - type: input
+    id: python
+    attributes:
+      label: Python version
+      placeholder: "3.12.1"
+    validations:
+      required: true
+  - type: dropdown
+    id: auth
+    attributes:
+      label: Auth mode
+      options: [bot, user, "n/a"]
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Command / steps to reproduce
+      render: shell
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behaviour
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behaviour (redact tokens & personal data)
+      render: shell
+    validations:
+      required: true
