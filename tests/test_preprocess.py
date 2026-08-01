@@ -1,4 +1,4 @@
-from scraper.preprocess import clean_content
+from discord_channel_scraper.preprocess import clean_content
 
 
 def test_clean_resolves_user_mention():

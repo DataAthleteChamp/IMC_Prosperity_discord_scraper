@@ -1,4 +1,4 @@
-from scraper.auth import BotAuth, UserAuth, from_mode
+from discord_channel_scraper.auth import BotAuth, UserAuth, from_mode
 
 
 def test_bot_auth_prefixes_token():

@@ -1,6 +1,6 @@
 from datetime import UTC, datetime
 
-from scraper.snowflake import datetime_to_snowflake, snowflake_to_datetime
+from discord_channel_scraper.snowflake import datetime_to_snowflake, snowflake_to_datetime
 
 
 def test_snowflake_roundtrip():

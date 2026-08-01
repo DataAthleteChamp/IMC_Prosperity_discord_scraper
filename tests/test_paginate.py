@@ -10,9 +10,9 @@ from typing import Any
 import httpx
 import pytest
 
-from scraper.auth import BotAuth
-from scraper.client import DiscordClient
-from scraper.paginate import iter_channel_messages
+from discord_channel_scraper.auth import BotAuth
+from discord_channel_scraper.client import DiscordClient
+from discord_channel_scraper.paginate import iter_channel_messages
 
 
 def _make_message(id_: int) -> dict[str, Any]:

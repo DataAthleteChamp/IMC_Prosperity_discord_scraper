@@ -1,8 +1,8 @@
 import json
 
-from scraper.models import Channel
-from scraper.normalize import normalize_message
-from scraper.writer import CursorStore, JsonlWriter, write_channel_index
+from discord_channel_scraper.models import Channel
+from discord_channel_scraper.normalize import normalize_message
+from discord_channel_scraper.writer import CursorStore, JsonlWriter, write_channel_index
 
 
 def test_jsonl_writer_appends(tmp_path, raw_message):

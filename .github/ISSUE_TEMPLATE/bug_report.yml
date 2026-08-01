@@ -12,7 +12,7 @@ body:
     id: version
     attributes:
       label: Scraper version
-      placeholder: "0.1.0 (output of `prosperity-scraper --version`)"
+      placeholder: "0.2.0 (output of `discord-channel-scraper --version`)"
     validations:
       required: true
   - type: input

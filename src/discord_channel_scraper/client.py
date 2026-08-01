@@ -64,7 +64,7 @@ class DiscordClient:
         auth: AuthBackend,
         *,
         rate_limit_rps: float = 5.0,
-        user_agent: str = "prosperity-scraper/0.0.1",
+        user_agent: str = "discord-channel-scraper/0.2.0",
         max_retries: int = 5,
         jitter: tuple[float, float] = (0.2, 0.8),
     ) -> None:

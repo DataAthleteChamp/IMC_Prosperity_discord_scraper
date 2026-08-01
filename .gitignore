@@ -5,11 +5,16 @@
 *.token
 *.secret
 
+# Personal scrape config (server/channel IDs) — share scraper.example.toml instead
+scraper.toml
+config.toml
+
 # Scraped data — NEVER commit
 data/
 attachments/
 exports/
 *.jsonl
+!examples/*.jsonl
 *.db
 *.sqlite
 *.sqlite3

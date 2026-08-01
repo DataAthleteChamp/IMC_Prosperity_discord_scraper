@@ -1,4 +1,4 @@
-from scraper.normalize import normalize_channel, normalize_message
+from discord_channel_scraper.normalize import normalize_channel, normalize_message
 
 
 def test_normalize_message_basic(raw_message):

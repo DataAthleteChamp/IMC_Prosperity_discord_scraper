@@ -9,10 +9,15 @@ exists.
 ┌──────────────────────────────────────────────────────────┐
 │                     CLI   (click)                        │
 │                                                          │
-│   --auth {bot|user}  --since/--until  --channels ...     │
+│   scraper.toml ──► load_config() ──► [Target, Target...] │
+│         │                                                │
+│         │  each Target: guild_id, channels, output_dir,  │
+│         │               auth, token_env, since/until     │
+│         ▼                                                │
+│   run_targets()  — sequential, one target at a time      │
 │         │                                                │
 │         ▼                                                │
-│   Settings.load()  ──►  .env / keyring                   │
+│   resolve_token()  ──►  .env / environment               │
 │         │                                                │
 │         ▼                                                │
 │   AuthBackend (Protocol)                                 │
@@ -29,6 +34,10 @@ exists.
 │       → text / announce / forum + active/archived threads│
 │         │                                                │
 │         ▼                                                │
+│   select_channels(allow, deny)                           │
+│       → match by ID or name, cascade to child threads    │
+│         │                                                │
+│         ▼                                                │
 │   iter_channel_messages(channel_id, since, until)        │
 │       → snowflake-cursor pagination, newest→oldest       │
 │         │                                                │
@@ -37,6 +46,7 @@ exists.
 │         │                                                │
 │         ▼                                                │
 │   JsonlWriter.append()  + CursorStore.update()           │
+│       → this target's own output_dir                     │
 │                                                          │
 └──────────────────────────────────────────────────────────┘
 ```
@@ -45,7 +55,8 @@ exists.
 
 | Module | Responsibility |
 |---|---|
-| `config.py` | Loads `Settings` from `.env` (token, guild id, output dir, rate limit, user-agent). |
+| `targets.py` | Parses `scraper.toml` into `Target` objects (one per server) with stdlib `tomllib`. Validates names, guild IDs, time bounds, and output-directory collisions. Also holds the `EXAMPLE_CONFIG` template used by `init`. |
+| `config.py` | Loads secrets and process-wide defaults from `.env` / the environment. `resolve_token()` maps an auth mode (plus optional per-target `token_env`) to a token. |
 | `auth.py` | `AuthBackend` Protocol with `BotAuth` and `UserAuth` implementations — the only place where the two auth modes differ. |
 | `snowflake.py` | Convert `datetime` ↔ Discord snowflake for time-bounded pagination. |
 | `client.py` | Thin async Discord REST client on top of `httpx`. Rate limiting, 429/5xx handling, endpoint helpers. |
@@ -53,15 +64,31 @@ exists.
 | `normalize.py` | Pure functions that turn raw Discord payloads into the models. |
 | `paginate.py` | `iter_channel_messages()` — snowflake-cursor pagination with optional `--since` / `--until` / resume-from-cursor. |
 | `discover.py` | `discover_channels()` — enumerates every scrapeable channel, thread, and forum post in a guild. |
+| `selectors.py` | `select_channels()` — applies allow/deny selectors that may be IDs *or* names, cascading a parent match down to its threads. Reports selectors that matched nothing. |
 | `writer.py` | `JsonlWriter` (per-channel append-only) + `CursorStore` (`_cursors.json`) + `write_channel_index()`. |
-| `scrape.py` | `run_backfill()` orchestrator — ties discovery, pagination, normalization, and writing together. |
+| `scrape.py` | `run_backfill()` for one guild; `run_target()` builds a client for a `Target`; `run_targets()` drives many targets sequentially and isolates failures. |
 | `preprocess.py` | Optional LLM-preprocessing pass: resolves mentions, strips markdown, appends `content_clean`. |
-| `cli.py` | `click`-based entry point exposing `scrape` and `preprocess` subcommands. |
+| `cli.py` | `click`-based entry point exposing `scrape`, `targets`, `init`, and `preprocess` subcommands. |
+
+## Targets and isolation
+
+A **target** is one server plus the decisions about it: which channels, which
+time window, which token, and where the output goes.
+
+- Targets run **sequentially**, never concurrently. A single Discord account
+  issuing parallel bursts against several guilds is exactly the traffic shape
+  that gets flagged; one-at-a-time keeps the request rate at the configured
+  ceiling overall, not per server.
+- Each target owns its `output_dir`. `_cursors.json` and `_channels.json` are
+  per-directory, so two servers can never corrupt each other's resume state.
+  The config loader rejects shared output directories up front.
+- A failing target is recorded as `{"error": ...}` in the run summary and the
+  remaining targets still run.
 
 ## Output layout
 
 ```
-data/
+<target.output_dir>/
 ├── _channels.json        # discovered channels (ids, names, types)
 ├── _cursors.json         # per-channel watermarks (resume points)
 └── <channel_id>.jsonl    # one file per channel, one message per line
@@ -111,13 +138,13 @@ Every page is committed to `_cursors.json` immediately after it's written to
 JSONL. On restart:
 
 - If `backfill_done == false`: resume going **older** from `oldest_seen`.
-- If `backfill_done == true` and `--since` isn't provided: walk **forward**
-  from `newest_seen` (future enhancement — currently incremental re-runs just
-  start from `newest_seen + 1` via the paginator's `after=` semantics).
+- If `backfill_done == true`: fetch only messages newer than `newest_seen`,
+  so re-running a completed target is incremental rather than a full
+  re-download. Passing an explicit `--since` overrides that watermark.
 
-Dedup on re-read is on `id` — the writer is append-only, so if you manually
-re-run over the same range you can get duplicate lines; `preprocess.py` can
-be taught to drop them (future work — see roadmap).
+The writer is append-only and does not deduplicate, so the watermark is what
+keeps re-runs clean. If you deliberately re-scrape a range you already have
+(e.g. with `--since`), expect duplicate lines.
 
 ## Rate-limiting design
 

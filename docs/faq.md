@@ -1,6 +1,6 @@
 # FAQ
 
-## I'm not an admin of the IMC Prosperity server. Can I still use this?
+## I'm not an admin of the server I want to archive. Can I still use this?
 
 Yes — that's what the `--auth user` backend is for. It authenticates with
 your own Discord user token. Be aware this violates Discord's Terms of
@@ -24,7 +24,7 @@ heuristics. Empirically:
   patterns (mass-DMing, raid assistance, etc.).
 
 If you are concerned, create a dedicated throwaway Discord account, join
-IMC Prosperity with it, and use *its* token.
+the server with it, and use *its* token.
 
 ## Why JSONL and not SQLite?
 
@@ -37,10 +37,33 @@ single-file portability). JSONL was picked as the default because:
 
 A future version may add SQLite as an option (see roadmap in README).
 
-## Can I use this for other Discord servers?
+## Can I scrape several servers at once?
 
-Yes. The project's name is specific to IMC Prosperity but the code is
-not: set `DISCORD_GUILD_ID` to any server your account belongs to.
+Yes — that's the main workflow. Add one `[[targets]]` block per server to
+`scraper.toml`, each with its own `guild_id`, `channels`, and `output_dir`,
+then run `discord-channel-scraper scrape --all`. Targets are processed
+sequentially so a single account never issues parallel bursts.
+
+All targets share the account token from `.env` by default. To use a
+different account for one server, put its token in another env var and point
+the target at it with `token_env = "DISCORD_USER_TOKEN_ALT"`.
+
+## How do I pick which channels to scrape?
+
+List them under `channels` by **name or ID** — `channels = ["general",
+"round-5"]` works, and so does a raw snowflake. `exclude_channels` uses the
+same syntax and wins over `channels`. Naming a text or forum channel also
+selects the threads underneath it. Omit `channels` entirely to take every
+channel your account can read.
+
+Run `discord-channel-scraper scrape --target NAME --dry-run` to print the
+full channel list for a server without downloading any messages.
+
+## Can two targets write to the same folder?
+
+No. Each target needs its own `output_dir` because `_cursors.json` and
+`_channels.json` are per-directory; sharing one would corrupt both servers'
+resume state. The config loader rejects it at startup.
 
 ## How do I get my user token?
 
@@ -71,8 +94,9 @@ your exact permissions.
 
 At the default 5 req/s × 100 messages/request = 500 messages/second.
 For a channel with 50,000 messages that's ~100 seconds, plus jitter.
-For the IMC Prosperity server as of April 2026 (~9 channels), expect
-anywhere from a few minutes to an hour depending on message density.
+For a mid-sized community server (~10 channels), expect anywhere from a
+few minutes to an hour depending on message density. With `scrape --all`,
+targets run one after another, so total time is the sum across servers.
 
 ## Is it resumable?
 

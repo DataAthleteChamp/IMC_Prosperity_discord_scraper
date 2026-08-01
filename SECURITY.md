@@ -9,7 +9,9 @@ maintainer directly or use GitHub's private vulnerability reporting
 
 ## Token handling rules
 
-1. Tokens live only in `.env` or the OS keyring — never in code, never in git.
+1. Tokens live only in `.env` or the environment — never in code, never in
+   git, never in `scraper.toml` (which only holds server/channel IDs and
+   output paths, so it is safe to share).
 2. `.gitignore` excludes `.env`; pre-commit runs `gitleaks` to double-check.
 3. A Discord user token is **equivalent to your password**. It grants full
    account access, including DMs. Rotate it (change your Discord password) if

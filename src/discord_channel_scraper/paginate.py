@@ -23,6 +23,7 @@ async def iter_channel_messages(
     *,
     since: datetime | None = None,
     until: datetime | None = None,
+    after: str | None = None,
     start_before: str | None = None,
     page_size: int = 100,
 ) -> AsyncIterator[list[dict[str, Any]]]:
@@ -34,6 +35,9 @@ async def iter_channel_messages(
         Lower bound (inclusive). Stop yielding once messages drop below it.
     until:
         Upper bound (inclusive). Start paginating at this snowflake.
+    after:
+        Exclusive lower-bound snowflake, e.g. the ``newest_seen`` watermark of a
+        finished backfill. Combined with ``since`` by taking the tighter bound.
     start_before:
         Explicit snowflake upper bound (e.g. resume from a saved cursor).
         Overrides ``until``.
@@ -42,7 +46,11 @@ async def iter_channel_messages(
     if before is None and until is not None:
         before = datetime_to_snowflake(until)
 
-    since_sf = datetime_to_snowflake(since) if since else None
+    # Both bounds are normalised to a single inclusive floor on the message id.
+    bounds = [int(datetime_to_snowflake(since)) for since in ([since] if since else [])]
+    if after is not None:
+        bounds.append(int(after) + 1)
+    floor: int | None = max(bounds) if bounds else None
 
     while True:
         page = await client.get_messages(channel_id, before=before, limit=page_size)
@@ -50,8 +58,8 @@ async def iter_channel_messages(
             return
 
         # Pages come newest-first. Optionally trim by lower bound.
-        if since_sf is not None:
-            trimmed = [m for m in page if int(m["id"]) >= int(since_sf)]
+        if floor is not None:
+            trimmed = [m for m in page if int(m["id"]) >= floor]
             if trimmed:
                 yield trimmed
             if len(trimmed) < len(page):

@@ -6,6 +6,9 @@ Thanks for your interest! Before opening a PR:
    and `README.md` for the ToS context.
 2. **Never commit scraped data.** CI will reject any PR that touches `data/`,
    `*.jsonl`, or anything that looks like a real Discord message payload.
+   Your own `scraper.toml` is gitignored — edit `scraper.example.toml` if you
+   need to change the shipped template (a test asserts it matches the
+   `EXAMPLE_CONFIG` constant in `targets.py`).
 3. **Never commit credentials.** Pre-commit + CI run `gitleaks`.
 
 ## Development setup
@@ -13,7 +16,7 @@ Thanks for your interest! Before opening a PR:
 ```bash
 python -m venv .venv
 source .venv/bin/activate
-pip install -e ".[dev,user]"
+pip install -e ".[dev]"
 pre-commit install
 pytest
 ```

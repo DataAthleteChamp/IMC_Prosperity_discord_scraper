@@ -1,8 +1,9 @@
-"""Minimal example: run a dry-run discovery against a guild.
+"""Minimal example: run a dry-run discovery against every configured target.
 
-Usage:
+Usage::
 
-    cp ../.env.example ../.env   # fill in DISCORD_USER_TOKEN, DISCORD_GUILD_ID
+    cp ../.env.example ../.env          # fill in DISCORD_USER_TOKEN
+    discord-channel-scraper init        # creates scraper.toml, then edit it
     python examples/dry_run.py
 """
 
@@ -11,22 +12,22 @@ from __future__ import annotations
 import asyncio
 import json
 
-from scraper.auth import from_mode
-from scraper.client import DiscordClient
-from scraper.config import Settings
-from scraper.discover import discover_channels
+from discord_channel_scraper.config import load_env, user_agent_from_env
+from discord_channel_scraper.scrape import run_targets
+from discord_channel_scraper.targets import find_config, load_config
 
 
 async def main() -> None:
-    settings = Settings.load("user")
-    assert settings.guild_id, "Set DISCORD_GUILD_ID in .env"
-    async with DiscordClient(
-        from_mode("user", settings.token),
-        rate_limit_rps=settings.rate_limit_rps,
-        user_agent=settings.user_agent,
-    ) as client:
-        channels = await discover_channels(client, settings.guild_id)
-    print(json.dumps([c.model_dump(mode="json") for c in channels], indent=2))
+    load_env()
+    path = find_config()
+    assert path is not None, "No scraper.toml found — run 'discord-channel-scraper init'"
+    config = load_config(path)
+    summary = await run_targets(
+        config.select(None),
+        user_agent=user_agent_from_env(),
+        dry_run=True,
+    )
+    print(json.dumps(summary, indent=2, default=str))
 
 
 if __name__ == "__main__":

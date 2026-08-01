@@ -1,0 +1,33 @@
+# =============================================================================
+# discord-channel-scraper — scrape targets
+#
+# One [[targets]] block per Discord server. Tokens NEVER go in this file; they
+# live in .env / the environment, so this file is safe to share or commit.
+# Find IDs with Developer Mode on: right-click a server or channel -> Copy ID.
+# =============================================================================
+
+[defaults]
+auth = "user"          # "user" (your account token) or "bot" (invited bot token)
+rate_limit = 5         # average requests/second; keep <= 10
+output_dir = "./data"  # base dir for targets that don't set their own
+
+[[targets]]
+name = "server-one"
+guild_id = "000000000000000000"
+# Absolute path is recommended so output doesn't depend on where you run from.
+output_dir = "/absolute/path/to/server-one"
+# Channels to scrape, by name or ID. Omit or leave empty for every readable
+# channel. Naming a forum/text channel also includes its threads.
+channels = ["general", "announcements"]
+exclude_channels = []
+# since = "2025-01-01T00:00:00Z"
+# until = "2025-12-31T23:59:59Z"
+
+[[targets]]
+name = "server-two"
+guild_id = "111111111111111111"
+output_dir = "/absolute/path/to/server-two"
+channels = ["strategy", "333333333333333333"]
+exclude_channels = ["off-topic"]
+# enabled = false                        # skip this target in `scrape --all`
+# token_env = "DISCORD_USER_TOKEN_ALT"   # use a different account for this server
